@@ -96,7 +96,7 @@ td { padding: 11px 10px; border-bottom: 1px solid var(--border); }
       <div class="card full highlight">
         <div class="card-label">Patrimônio Total (XP + Cripto)</div>
         <div class="card-value yellow">R$ 31.691,35</div>
-        <div class="card-sub">Aportado: R$ 26.980,68 • <span class="rent pos">+17,46%</span></div>
+        <div class="card-sub">Aportado: R$ 27.723,46 • <span class="rent pos">+17,46%</span></div>
       </div>
       <div class="card"><div class="card-label">Lucro Total</div><div class="card-value green">+R$ 4.710,67</div></div>
       <div class="card"><div class="card-label">Atualizado</div><div class="card-value white" style="font-size:14px" id="last-update">Agora</div></div>
@@ -292,15 +292,18 @@ td { padding: 11px 10px; border-bottom: 1px solid var(--border); }
       <div class="card-sub">Conta investimento XP</div>
     </div>
     <div class="opp-form">
-      <h3>Movimentar Caixa</h3>
+      <h3>Depósito / Saque</h3>
       <div class="form-row">
-        <input type="number" id="caixa-movimento" placeholder="Valor a adicionar (+) ou retirar (-)" step="0.01">
+        <input type="number" id="caixa-valor" placeholder="Valor (R$)" step="0.01">
       </div>
-      <button class="btn-add" onclick="movimentarCaixa()">Aplicar Movimento</button>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn-add" style="background:#00C853;flex:1" onclick="movimentarCaixa('deposito')">+ Depósito</button>
+        <button class="btn-add" style="background:#FF3B30;flex:1" onclick="movimentarCaixa('saque')">− Saque</button>
+      </div>
     </div>
     <div class="card">
-      <div class="card-label">Exemplos</div>
-      <div class="card-sub">+500 = adicionar R$ 500<br>-200 = retirar R$ 200</div>
+      <div class="card-label">Importante</div>
+      <div class="card-sub">Depósito e saque alteram apenas o caixa. O valor total aportado não muda.</div>
     </div>
     <div class="card">
       <div class="card-label">Como funciona</div>
@@ -385,6 +388,26 @@ function addAporte() {
   };
   novosAportes.unshift(aporte);
   localStorage.setItem('aportly_novos_aportes', JSON.stringify(novosAportes));
+
+  // Atualiza o total aportado
+  let totalAportado = parseFloat(localStorage.getItem('aportly_total_aportado') || '27723.46');
+  totalAportado += parseFloat(valor);
+  localStorage.setItem('aportly_total_aportado', totalAportado);
+  // Atualiza textos de "Aportado" na tela
+  document.querySelectorAll('.card-sub').forEach(el => {
+    if (el.textContent.includes('Aportado:')) {
+      el.innerHTML = el.innerHTML.replace(/R\$ [0-9.,]+/, formatMoney(totalAportado));
+    }
+  });
+
+  // Atualiza o texto na tela
+  document.querySelectorAll('.card-sub').forEach(el => {
+    if (el.textContent.includes('Aportado:')) {
+      const patrimonio = 32643.88; // valor atual aproximado
+      const rent = ((patrimonio / totalAportado) - 1) * 100;
+      el.innerHTML = 'Aportado: ' + formatMoney(totalAportado) + ' • <span class="green">+' + rent.toFixed(2) + '%</span>';
+    }
+  });
 
   // Se for ação/FII, desconta do caixa XP
   if (tipo === 'acao' && valorCaixa >= parseFloat(valor)) {
@@ -761,25 +784,30 @@ function atualizarCaixa() {
 }
 
 
-function movimentarCaixa() {
-  const movimento = parseFloat(document.getElementById('caixa-movimento').value);
-  if (isNaN(movimento)) { alert('Informe um valor (use + para adicionar ou - para retirar)'); return; }
-  
-  const novoSaldo = valorCaixa + movimento;
-  if (novoSaldo < 0) { alert('Saldo insuficiente para essa retirada'); return; }
-  
-  valorCaixa = novoSaldo;
+function movimentarCaixa(tipo) {
+  const valor = parseFloat(document.getElementById('caixa-valor').value);
+  if (!valor || valor <= 0) { alert('Informe um valor válido'); return; }
+
+  if (tipo === 'saque' && valor > valorCaixa) {
+    alert('Saldo insuficiente para esse saque');
+    return;
+  }
+
+  if (tipo === 'deposito') {
+    valorCaixa += valor;
+  } else {
+    valorCaixa -= valor;
+  }
+
   localStorage.setItem('aportly_caixa', valorCaixa);
-  
   document.getElementById('caixa-valor-grande').textContent = formatMoney(valorCaixa);
   const cardCaixa = document.getElementById('card-caixa');
   if (cardCaixa) cardCaixa.textContent = formatMoney(valorCaixa);
-  
   recalcularTotal();
-  
-  const tipo = movimento >= 0 ? 'Adicionado' : 'Retirado';
-  alert(tipo + ' ' + formatMoney(Math.abs(movimento)) + '\nNovo saldo: ' + formatMoney(valorCaixa));
-  document.getElementById('caixa-movimento').value = '';
+
+  const msg = tipo === 'deposito' ? 'Depósito realizado' : 'Saque realizado';
+  alert(msg + ': ' + formatMoney(valor) + '\nNovo saldo: ' + formatMoney(valorCaixa));
+  document.getElementById('caixa-valor').value = '';
 }
 
 function recalcularTotal() {

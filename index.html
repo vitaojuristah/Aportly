@@ -393,21 +393,27 @@ function addAporte() {
   let totalAportado = parseFloat(localStorage.getItem('aportly_total_aportado') || '27723.46');
   totalAportado += parseFloat(valor);
   localStorage.setItem('aportly_total_aportado', totalAportado);
-  // Atualiza textos de "Aportado" na tela
-  document.querySelectorAll('.card-sub').forEach(el => {
-    if (el.textContent.includes('Aportado:')) {
-      el.innerHTML = el.innerHTML.replace(/R\$ [0-9.,]+/, formatMoney(totalAportado));
-    }
-  });
 
-  // Atualiza o texto na tela
-  document.querySelectorAll('.card-sub').forEach(el => {
-    if (el.textContent.includes('Aportado:')) {
-      const patrimonio = 32643.88; // valor atual aproximado
-      const rent = ((patrimonio / totalAportado) - 1) * 100;
-      el.innerHTML = 'Aportado: ' + formatMoney(totalAportado) + ' • <span class="green">+' + rent.toFixed(2) + '%</span>';
+  // Recalcula o patrimônio atual e a rentabilidade
+  recalcularTotal();
+
+  // Atualiza os textos de "Aportado" com a rentabilidade correta
+  setTimeout(() => {
+    const patrimonioEl = document.querySelector('.card-value.yellow');
+    let patrimonio = 0;
+    if (patrimonioEl) {
+      const txt = patrimonioEl.textContent.replace(/[^0-9,]/g, '').replace(',', '.');
+      patrimonio = parseFloat(txt) || 0;
     }
-  });
+    const rent = patrimonio > 0 && totalAportado > 0 ? ((patrimonio / totalAportado) - 1) * 100 : 0;
+    const rentStr = (rent >= 0 ? '+' : '') + rent.toFixed(2) + '%';
+
+    document.querySelectorAll('.card-sub').forEach(el => {
+      if (el.textContent.includes('Aportado:')) {
+        el.innerHTML = 'Aportado: ' + formatMoney(totalAportado) + ' • <span class="' + (rent >= 0 ? 'green' : 'red') + '">' + rentStr + '</span>';
+      }
+    });
+  }, 100);
 
   // Se for ação/FII, desconta do caixa XP
   if (tipo === 'acao' && valorCaixa >= parseFloat(valor)) {

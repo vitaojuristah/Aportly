@@ -84,7 +84,7 @@ td { padding: 11px 10px; border-bottom: 1px solid var(--border); }
 .login-box .slogan { text-align: center; margin-bottom: 22px; }
 .login-box input { display: block; width: 100%; margin-bottom: 10px; font-size: 16px; padding: 12px; }
 .login-erro { color: var(--red); font-size: 12px; min-height: 16px; margin-bottom: 8px; }
-.carregando { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--gray-light); font-size: 13px; }
+.carregando { position: fixed; inset: 0; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; padding: 16px; text-align: center; color: var(--gray-light); font-size: 13px; }
 </style>
 </head>
 <body>
@@ -95,7 +95,7 @@ td { padding: 11px 10px; border-bottom: 1px solid var(--border); }
   <form class="login-box" onsubmit="entrar(event)">
     <div class="logo">Aport<span>ly</span></div>
     <div class="slogan">Seus aportes sob controle</div>
-    <input type="email" id="login-email" placeholder="E-mail" autocomplete="username" required>
+    <input type="text" id="login-usuario" placeholder="Usuário" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
     <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" required>
     <div class="login-erro" id="login-erro"></div>
     <button class="btn-add" id="login-btn" type="submit">Entrar</button>
@@ -386,18 +386,25 @@ const valorAtivo = a => a.qtd * a.preco;
 const rentAtivo = a => a.custo > 0 ? (valorAtivo(a) / a.custo - 1) * 100 : 0;
 
 // === LOGIN ===
+// O Supabase exige e-mail: o usuário "digo" vira "digo@aportly.app" (no painel, crie o usuário com esse e-mail).
+const LOGIN_DOMINIO = 'aportly.app';
+function usuarioParaEmail(u) {
+  u = u.trim().toLowerCase();
+  return u.includes('@') ? u : `${u}@${LOGIN_DOMINIO}`;
+}
+
 async function entrar(ev) {
   ev.preventDefault();
   const btn = $('login-btn'), erro = $('login-erro');
   erro.textContent = ''; btn.disabled = true; btn.textContent = 'Entrando…';
-  const { data, error } = await sb.auth.signInWithPassword({ email: $('login-email').value.trim(), password: $('login-senha').value });
+  const { data, error } = await sb.auth.signInWithPassword({ email: usuarioParaEmail($('login-usuario').value), password: $('login-senha').value });
   btn.disabled = false; btn.textContent = 'Entrar';
-  if (error) { erro.textContent = error.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : error.message; return; }
+  if (error) { erro.textContent = error.message === 'Invalid login credentials' ? 'Usuário ou senha incorretos.' : error.message; return; }
   $('login-senha').value = '';
   iniciarApp(data.user);
 }
 
-async function sair() { await sb.auth.signOut(); }
+async function sair() { await sb.auth.signOut({ scope: 'local' }); mostrarLogin(); }
 
 function mostrarLogin() {
   userId = null; cfg = null; ativos = []; aportes = []; oportunidades = []; alertas = [];
@@ -409,6 +416,7 @@ function mostrarLogin() {
 async function iniciarApp(user) {
   userId = user.id;
   $('login-screen').style.display = 'none';
+  $('carregando').textContent = 'Carregando…';
   $('carregando').style.display = 'flex';
   try {
     await carregarDados();
@@ -418,12 +426,18 @@ async function iniciarApp(user) {
     renderTudo();
   } catch (e) {
     console.error(e);
-    $('carregando').textContent = 'Erro ao carregar dados: ' + (e.message || e);
+    $('carregando').innerHTML = 'Erro ao carregar dados: ' + esc(e.message || e) +
+      '<button class="btn-header ghost" onclick="sair()">Sair e entrar de novo</button>';
   }
 }
 
 sb.auth.onAuthStateChange(event => { if (event === 'SIGNED_OUT') mostrarLogin(); });
-sb.auth.getSession().then(({ data }) => data.session ? iniciarApp(data.session.user) : mostrarLogin());
+// getUser confere no servidor: se o usuário da sessão salva foi apagado no painel, volta para o login
+sb.auth.getUser().then(async ({ data, error }) => {
+  if (data?.user) return iniciarApp(data.user);
+  if (error) await sb.auth.signOut({ scope: 'local' });
+  mostrarLogin();
+});
 
 // === BANCO ===
 async function carregarDados() {

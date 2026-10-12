@@ -292,11 +292,15 @@ td { padding: 11px 10px; border-bottom: 1px solid var(--border); }
       <div class="card-sub">Conta investimento XP</div>
     </div>
     <div class="opp-form">
-      <h3>Atualizar Caixa</h3>
+      <h3>Movimentar Caixa</h3>
       <div class="form-row">
-        <input type="number" id="caixa-input" placeholder="Novo valor do caixa (R$)" step="0.01" value="4399.94">
+        <input type="number" id="caixa-movimento" placeholder="Valor a adicionar (+) ou retirar (-)" step="0.01">
       </div>
-      <button class="btn-add" onclick="salvarCaixa()">Salvar Caixa</button>
+      <button class="btn-add" onclick="movimentarCaixa()">Aplicar Movimento</button>
+    </div>
+    <div class="card">
+      <div class="card-label">Exemplos</div>
+      <div class="card-sub">+500 = adicionar R$ 500<br>-200 = retirar R$ 200</div>
     </div>
     <div class="card">
       <div class="card-label">Como funciona</div>
@@ -757,16 +761,25 @@ function atualizarCaixa() {
 }
 
 
-function salvarCaixa() {
-  const valor = parseFloat(document.getElementById('caixa-input').value);
-  if (isNaN(valor) || valor < 0) { alert('Informe um valor válido'); return; }
-  valorCaixa = valor;
-  localStorage.setItem('aportly_caixa', valor);
-  document.getElementById('caixa-valor-grande').textContent = formatMoney(valor);
+function movimentarCaixa() {
+  const movimento = parseFloat(document.getElementById('caixa-movimento').value);
+  if (isNaN(movimento)) { alert('Informe um valor (use + para adicionar ou - para retirar)'); return; }
+  
+  const novoSaldo = valorCaixa + movimento;
+  if (novoSaldo < 0) { alert('Saldo insuficiente para essa retirada'); return; }
+  
+  valorCaixa = novoSaldo;
+  localStorage.setItem('aportly_caixa', valorCaixa);
+  
+  document.getElementById('caixa-valor-grande').textContent = formatMoney(valorCaixa);
   const cardCaixa = document.getElementById('card-caixa');
-  if (cardCaixa) cardCaixa.textContent = formatMoney(valor);
+  if (cardCaixa) cardCaixa.textContent = formatMoney(valorCaixa);
+  
   recalcularTotal();
-  alert('Caixa atualizado para ' + formatMoney(valor));
+  
+  const tipo = movimento >= 0 ? 'Adicionado' : 'Retirado';
+  alert(tipo + ' ' + formatMoney(Math.abs(movimento)) + '\nNovo saldo: ' + formatMoney(valorCaixa));
+  document.getElementById('caixa-movimento').value = '';
 }
 
 function recalcularTotal() {

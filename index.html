@@ -268,9 +268,39 @@ td { padding: 11px 10px; border-bottom: 1px solid var(--border); }
       </div>
       <button class="btn-add" onclick="atualizarAcaoManual()">Atualizar Ação</button>
     </div>
+    
+    <div class="opp-form">
+      <h3>Caixa (dinheiro disponível)</h3>
+      <div class="form-row">
+        <input type="number" id="manual-caixa" placeholder="Valor em caixa (R$)" step="0.01">
+      </div>
+      <button class="btn-add" onclick="atualizarCaixa()">Atualizar Caixa</button>
+    </div>
+
     <div class="card">
       <div class="card-label">Dica</div>
       <div class="card-sub">Consulte o preço na XP ou no Google e cole aqui. O app recalcula o valor e o lucro automaticamente.</div>
+    </div>
+  </div>
+
+
+  <div id="tab-caixa" class="tab-content">
+    <div class="section-title">💰 Caixa XP</div>
+    <div class="card full highlight">
+      <div class="card-label">Saldo Disponível</div>
+      <div class="card-value yellow" id="caixa-valor-grande">R$ 4.399,94</div>
+      <div class="card-sub">Conta investimento XP</div>
+    </div>
+    <div class="opp-form">
+      <h3>Atualizar Caixa</h3>
+      <div class="form-row">
+        <input type="number" id="caixa-input" placeholder="Novo valor do caixa (R$)" step="0.01" value="4399.94">
+      </div>
+      <button class="btn-add" onclick="salvarCaixa()">Salvar Caixa</button>
+    </div>
+    <div class="card">
+      <div class="card-label">Como funciona</div>
+      <div class="card-sub">Quando você registrar um aporte em ação/FII, o valor será descontado automaticamente deste caixa.</div>
     </div>
   </div>
 
@@ -284,6 +314,7 @@ td { padding: 11px 10px; border-bottom: 1px solid var(--border); }
   <div class="nav-item" onclick="showTab('novo-aporte', this)"><div class="nav-icon">➕</div><div>Aporte</div></div>
   <div class="nav-item" onclick="showTab('aportes', this)"><div class="nav-icon">📥</div><div>Aportes</div></div>
   <div class="nav-item" onclick="showTab('oportunidades', this)"><div class="nav-icon">🟠</div><div>Oport.</div></div>
+  <div class="nav-item" onclick="showTab('caixa', this)"><div class="nav-icon">💰</div><div>Caixa</div></div>
   <div class="nav-item" onclick="showTab('atualizar', this)"><div class="nav-icon">✏️</div><div>Preços</div></div>
   <div class="nav-item" onclick="showTab('alertas', this)"><div class="nav-icon">🔔</div><div>Alertas</div></div>
   <div class="nav-item" onclick="showTab('sinais', this)"><div class="nav-icon">🎯</div><div>Sinais</div></div>
@@ -351,6 +382,12 @@ function addAporte() {
   novosAportes.unshift(aporte);
   localStorage.setItem('aportly_novos_aportes', JSON.stringify(novosAportes));
 
+  // Se for ação/FII, desconta do caixa XP
+  if (tipo === 'acao' && valorCaixa >= parseFloat(valor)) {
+    valorCaixa -= parseFloat(valor);
+    localStorage.setItem('aportly_caixa', valorCaixa);
+  }
+
   // Atualizar carteira
   atualizarCarteira(aporte);
 
@@ -394,6 +431,12 @@ function atualizarCarteira(aporte) {
 function removeNovoAporte(i) {
   novosAportes.splice(i, 1);
   localStorage.setItem('aportly_novos_aportes', JSON.stringify(novosAportes));
+
+  // Se for ação/FII, desconta do caixa XP
+  if (tipo === 'acao' && valorCaixa >= parseFloat(valor)) {
+    valorCaixa -= parseFloat(valor);
+    localStorage.setItem('aportly_caixa', valorCaixa);
+  }
   renderNovosAportes();
 }
 
@@ -647,7 +690,8 @@ function atualizarBTCManual() {
       }
     });
 
-    alert('Bitcoin atualizado!\n\nPreço: R$ ' + preco.toLocaleString('pt-BR') + 
+    recalcularTotal();
+alert('Bitcoin atualizado!\n\nPreço: R$ ' + preco.toLocaleString('pt-BR') + 
           '\nValor da posição: ' + valorFormatado + 
           '\nLucro: ' + lucroFormatado +
           '\n\nPatrimônio Total: ' + totalFormatado);
@@ -697,6 +741,59 @@ function atualizarAcaoManual() {
 
   document.getElementById('manual-ticker').value = '';
   document.getElementById('manual-preco').value = '';
+}
+
+
+let valorCaixa = parseFloat(localStorage.getItem('aportly_caixa') || '4399.94');
+
+function atualizarCaixa() {
+  const valor = parseFloat(document.getElementById('manual-caixa').value);
+  if (isNaN(valor) || valor < 0) { alert('Informe um valor válido'); return; }
+  valorCaixa = valor;
+  localStorage.setItem('aportly_caixa', valor);
+  recalcularTotal();
+  alert('Caixa atualizado: ' + formatMoney(valor));
+  document.getElementById('manual-caixa').value = '';
+}
+
+
+function salvarCaixa() {
+  const valor = parseFloat(document.getElementById('caixa-input').value);
+  if (isNaN(valor) || valor < 0) { alert('Informe um valor válido'); return; }
+  valorCaixa = valor;
+  localStorage.setItem('aportly_caixa', valor);
+  document.getElementById('caixa-valor-grande').textContent = formatMoney(valor);
+  const cardCaixa = document.getElementById('card-caixa');
+  if (cardCaixa) cardCaixa.textContent = formatMoney(valor);
+  recalcularTotal();
+  alert('Caixa atualizado para ' + formatMoney(valor));
+}
+
+function recalcularTotal() {
+  // Soma valor atual das ações
+  let totalAcoes = 0;
+  ativosXP.forEach(a => { totalAcoes += a.valor || 0; });
+
+  // Valor atual do BTC (pega do card se existir)
+  let totalBTC = 18765;
+  const btcEl = document.querySelector('.card-value.orange');
+  if (btcEl) {
+    const txt = btcEl.textContent.replace(/[^0-9,]/g, '').replace(',', '.');
+    const v = parseFloat(txt);
+    if (v > 0) totalBTC = v;
+  }
+
+  const total = totalAcoes + totalBTC + valorCaixa;
+  const totalFormatado = formatMoney(total);
+  const caixaEl = document.getElementById('card-caixa');
+  if (caixaEl) caixaEl.textContent = formatMoney(valorCaixa);
+
+  document.querySelectorAll('.card-value.yellow').forEach(el => {
+    const card = el.closest('.card');
+    if (card && card.textContent.includes('Patrimônio Total')) {
+      el.textContent = totalFormatado;
+    }
+  });
 }
 
 function showTab(tab, el) {

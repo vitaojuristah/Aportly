@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%230A0A0A'/><text x='90' y='115' font-family='Arial' font-size='72' font-weight='bold' text-anchor='middle' fill='%23FFD60A'>A</text></svg>">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aportly">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Aportly">
+<meta name="theme-color" content="#0A0A0A">
+<title>Aportly – Seus aportes sob controle</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --black: #0A0A0A; --dark: #141414; --gray-dark: #1F1F1F; --gray: #2A2A2A;
+  --gray-light: #6B6B6B; --white: #FFFFFF; --off-white: #F5F5F5;
+  --yellow: #FFD60A; --orange: #FF6B00; --green: #00C853; --red: #FF3B30;
+  --card: #1A1A1A; --border: #2C2C2C;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', -apple-system, sans-serif; background: var(--black); color: var(--off-white); padding-bottom: 90px; }
+.header { background: linear-gradient(180deg, #1A1A1A 0%, #0A0A0A 100%); padding: 16px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border); }
+.header-top { display: flex; justify-content: space-between; align-items: center; }
+.logo { font-size: 22px; font-weight: 800; color: var(--yellow); }
+.logo span { color: var(--white); }
+.datetime { font-size: 12px; color: var(--gray-light); text-align: right; }
+.datetime .time { font-size: 15px; font-weight: 600; color: var(--yellow); }
+.slogan { font-size: 12px; color: var(--gray-light); }
+.container { max-width: 480px; margin: 0 auto; padding: 16px; }
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.card { background: var(--card); border-radius: 14px; padding: 14px; border: 1px solid var(--border); }
+.card.full { grid-column: 1 / -1; }
+.card.highlight { background: linear-gradient(135deg, #1F1A00 0%, #1A1A1A 100%); border-color: var(--yellow); }
+.card-label { font-size: 11px; color: var(--gray-light); font-weight: 500; text-transform: uppercase; }
+.card-value { font-size: 18px; font-weight: 700; }
+.card-value.yellow { color: var(--yellow); } .card-value.orange { color: var(--orange); }
+.card-value.green { color: var(--green); } .card-value.red { color: var(--red); } .card-value.white { color: var(--white); }
+.card-sub { font-size: 11px; color: var(--gray-light); margin-top: 3px; }
+.section-title { font-size: 14px; font-weight: 700; margin: 22px 0 10px; color: var(--white); display: flex; align-items: center; gap: 8px; }
+.section-title .badge { background: var(--yellow); color: var(--black); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+.chart-box { background: var(--card); border-radius: 14px; padding: 14px; margin-bottom: 14px; border: 1px solid var(--border); }
+.chart-wrap { position: relative; height: 200px; }
+.table-box { background: var(--card); border-radius: 14px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 14px; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th { text-align: left; padding: 10px; font-weight: 600; color: var(--gray-light); font-size: 10px; text-transform: uppercase; background: var(--gray-dark); }
+td { padding: 11px 10px; border-bottom: 1px solid var(--border); }
+.asset-name { font-weight: 600; color: var(--white); }
+.asset-class { font-size: 10px; color: var(--gray-light); }
+.rent { font-weight: 600; } .rent.pos { color: var(--green); } .rent.neg { color: var(--red); }
+.sinal { display: inline-flex; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 12px; }
+.sinal.compra { background: rgba(0,200,83,0.15); color: var(--green); }
+.sinal.manter { background: rgba(255,214,10,0.15); color: var(--yellow); }
+.sinal.venda { background: rgba(255,59,48,0.15); color: var(--red); }
+.sinal.oportunidade { background: rgba(255,107,0,0.18); color: var(--orange); }
+.tab-content { display: none; } .tab-content.active { display: block; }
+.nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--dark); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0 18px; z-index: 100; overflow-x: auto; }
+.nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; color: var(--gray-light); font-weight: 500; cursor: pointer; padding: 4px 6px; min-width: 50px; }
+.nav-item.active { color: var(--yellow); }
+.nav-icon { font-size: 18px; }
+.opp-form, .alert-form { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+.opp-form h3, .alert-form h3 { font-size: 13px; margin-bottom: 10px; color: var(--yellow); }
+.form-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.form-row input, .form-row select {
+  flex: 1; min-width: 120px; background: var(--gray-dark); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px; color: var(--white); font-size: 13px; font-family: inherit;
+}
+.form-row input:focus, .form-row select:focus { outline: none; border-color: var(--yellow); }
+.btn-add { background: var(--orange); color: white; border: none; border-radius: 8px; padding: 10px 16px; font-weight: 700; font-size: 13px; cursor: pointer; width: 100%; }
+.btn-remove { background: transparent; border: none; color: var(--red); font-size: 16px; cursor: pointer; }
+.empty-state { text-align: center; padding: 30px 16px; color: var(--gray-light); font-size: 13px; }
+.empty-state .icon { font-size: 36px; margin-bottom: 8px; }
+.alert-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.alert-triggered { background: rgba(255,107,0,0.1); border-left: 3px solid var(--orange); }
+.update-info { text-align: center; font-size: 11px; color: var(--gray-light); margin: 16px 0 8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div><div class="logo">Aport<span>ly</span></div><div class="slogan">Seus aportes sob controle</div></div>
+    <div class="datetime"><div class="time" id="clock">--:--:--</div>
+      <button onclick="atualizarPrecos()" style="margin-top:6px;background:#FFD60A;color:#000;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">🔄 Atualizar Preços</button><div id="date">--/--/----</div></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div id="tab-dashboard" class="tab-content active">
+    <div class="cards">
+      <div class="card full highlight">
+        <div class="card-label">Patrimônio Total (XP + Cripto)</div>
+        <div class="card-value yellow">R$ 31.691,35</div>
+        <div class="card-sub">Aportado: R$ 26.980,68 • <span class="rent pos">+17,46%</span></div>
+      </div>
+      <div class="card"><div class="card-label">Lucro Total</div><div class="card-value green">+R$ 4.710,67</div></div>
+      <div class="card"><div class="card-label">Atualizado</div><div class="card-value white" style="font-size:14px" id="last-update">Agora</div></div>
+    </div>
+    <div class="section-title">📈 Evolução dos Aportes</div>
+    <div class="chart-box"><div class="chart-wrap"><canvas id="chartEvolucao"></canvas></div></div>
+    <div class="section-title">🥧 Alocação Total</div>
+    <div class="chart-box"><div class="chart-wrap"><canvas id="chartAlocacao"></canvas></div></div>
+    <div class="section-title">📊 Rentabilidade por Classe</div>
+    <div class="chart-box"><div class="chart-wrap"><canvas id="chartRentabilidade"></canvas></div></div>
+  </div>
+
+  <div id="tab-xp" class="tab-content">
+    <div class="cards"><div class="card full"><div class="card-label">Carteira XP</div><div class="card-value yellow">R$ 13.024,66</div><div class="card-sub">Aportado: R$ 12.257,22 • <span class="rent pos">+6,26%</span></div></div></div>
+    
+    <div class="section-title">📈 Performance das Principais Ações</div>
+    <div class="chart-box">
+      <div class="chart-wrap"><canvas id="chartAcoes"></canvas></div>
+    </div>
+
+    <div class="section-title">Ativos XP</div>
+    <div class="table-box"><table><thead><tr><th>Ativo</th><th>Valor</th><th>Rent.%</th><th>Sinal</th></tr></thead><tbody id="tabela-xp"></tbody></table></div>
+  </div>
+
+  <div id="tab-cripto" class="tab-content">
+    <div class="cards">
+      <div class="card full highlight"><div class="card-label">Bitcoin (BTC)</div><div class="card-value orange">R$ 18.765,00</div><div class="card-sub">0,04471413 BTC</div></div>
+      <div class="card"><div class="card-label">Investido</div><div class="card-value white">R$ 14.723,46</div></div>
+      <div class="card"><div class="card-label">Lucro</div><div class="card-value green">+R$ 4.018,29</div><div class="card-sub rent pos">+26,78%</div></div>
+    </div>
+    <div class="section-title">📈 Performance Bitcoin</div>
+    <div class="chart-box"><div class="chart-wrap"><canvas id="chartBTC"></canvas></div></div>
+  </div>
+
+  <div id="tab-aportes" class="tab-content">
+    <div class="cards"><div class="card full"><div class="card-label">Total Aportado (XP)</div><div class="card-value yellow">R$ 12.257,22</div><div class="card-sub">18 aportes</div></div></div>
+    <div class="section-title">📊 Histórico</div>
+    <div class="chart-box"><div class="chart-wrap"><canvas id="chartAportes"></canvas></div></div>
+    <div class="section-title">Lista</div>
+    <div class="table-box"><table><thead><tr><th>Data</th><th>Valor</th><th>Tipo</th><th>Acumulado</th></tr></thead><tbody id="tabela-aportes"></tbody></table></div>
+  </div>
+
+  <div id="tab-oportunidades" class="tab-content">
+    <div class="section-title">🟠 Oportunidades do Dia</div>
+    <div class="opp-form">
+      <h3>Adicionar Oportunidade</h3>
+      <div class="form-row">
+        <input type="text" id="opp-ticker" placeholder="Ticker (PETR4)" maxlength="8">
+        <input type="text" id="opp-nome" placeholder="Nome" maxlength="30">
+      </div>
+      <div class="form-row">
+        <input type="number" id="opp-preco" placeholder="Preço atual (R$)" step="0.01">
+        <input type="text" id="opp-motivo" placeholder="Motivo" maxlength="60">
+      </div>
+      <button class="btn-add" onclick="addOpportunity()">+ Adicionar 🟠</button>
+    </div>
+    <div class="section-title">Lista <span class="badge" id="opp-count">0</span></div>
+    <div class="table-box">
+      <div class="empty-state" id="opp-empty"><div class="icon">🟠</div><div>Nenhuma oportunidade ainda.</div></div>
+      <table id="opp-table" style="display:none"><thead><tr><th>Ativo</th><th>Preço</th><th>Motivo</th><th></th></tr></thead><tbody id="tabela-oportunidades"></tbody></table>
+    </div>
+  </div>
+
+  <div id="tab-alertas" class="tab-content">
+    <div class="section-title">🔔 Alertas de Preço</div>
+    <div class="alert-form">
+      <h3>Criar Alerta</h3>
+      <div class="form-row">
+        <input type="text" id="alert-ticker" placeholder="Ticker (BBAS3)" maxlength="8">
+        <select id="alert-tipo">
+          <option value="compra">🟢 Compra (abaixo de)</option>
+          <option value="venda">🔴 Venda (acima de)</option>
+          <option value="manter">🟡 Manter (próximo de)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <input type="number" id="alert-preco" placeholder="Preço alvo (R$)" step="0.01">
+        <input type="text" id="alert-nota" placeholder="Nota (opcional)" maxlength="40">
+      </div>
+      <button class="btn-add" onclick="addAlert()">+ Criar Alerta</button>
+    </div>
+    <div class="section-title">Alertas Ativos <span class="badge" id="alert-count">0</span></div>
+    <div class="table-box">
+      <div class="empty-state" id="alert-empty"><div class="icon">🔔</div><div>Nenhum alerta criado.<br>Defina preços para Compra / Venda / Manter.</div></div>
+      <table id="alert-table" style="display:none"><thead><tr><th>Ativo</th><th>Tipo</th><th>Preço Alvo</th><th>Nota</th><th></th></tr></thead><tbody id="tabela-alertas"></tbody></table>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-label">Como funciona</div>
+      <div class="card-sub">Atualize os preços na aba XP e compare com seus alertas. O app destaca quando o preço atual atingir o alvo.</div>
+    </div>
+  </div>
+
+  <div id="tab-metas" class="tab-content">
+    <div class="section-title">🎯 Metas de Aporte</div>
+    <div class="card">
+      <div class="card-label">Próximo Aporte Sugerido (+1%)</div>
+      <div class="card-value yellow">R$ 1.010,00</div>
+      <div class="card-sub">Último: R$ 1.000,00 em 04/10</div>
+    </div>
+  </div>
+
+  <div id="tab-sinais" class="tab-content">
+    <div class="section-title">Regras de Sinal</div>
+    <div class="card">
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
+        <div><span class="sinal compra">🟢 Compra / Reforçar</span> Preço atrativo (≤ -5% do médio)</div>
+        <div><span class="sinal manter">🟡 Manter</span> Empresa boa e preço justo (até +30%)</div>
+        <div><span class="sinal venda">🟠 Reavaliar</span> Valorização acima de 30% (estudar)</div>
+        <div><span class="sinal oportunidade">🔴 Estudar Venda Parcial</span> Acima de 50% ou muito acima do justo</div>
+      </div>
+    </div>
+    <div class="section-title">Sinais da Carteira</div>
+    <div class="table-box"><table><thead><tr><th>Ativo</th><th>Rent.%</th><th>Sinal</th></tr></thead><tbody id="tabela-sinais"></tbody></table></div>
+  <div class="card" style="margin-top:12px">
+      <div class="card-label">Estratégia RM Capital</div>
+      <div class="card-sub">Não vender boas empresas só porque subiram. Valorização >30% = reavaliar. >50% = estudar venda parcial.</div>
+    </div>
+</div>
+
+
+  <div id="tab-novo-aporte" class="tab-content">
+    <div class="section-title">📥 Registrar Novo Aporte</div>
+    <div class="opp-form">
+      <h3>Novo Aporte</h3>
+      <div class="form-row">
+        <input type="date" id="aporte-data">
+        <select id="aporte-tipo">
+          <option value="acao">Ação / FII</option>
+          <option value="btc">Bitcoin</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <input type="text" id="aporte-ativo" placeholder="Ticker (ex: BBAS3 ou BTC)" maxlength="10">
+      </div>
+      <div class="form-row">
+        <input type="number" id="aporte-valor" placeholder="Valor aportado (R$)" step="0.01">
+        <input type="number" id="aporte-valor-dia" placeholder="Valor atual no dia (R$)" step="0.01">
+      </div>
+      <div class="form-row">
+        <input type="text" id="aporte-obs" placeholder="Observação (opcional)" maxlength="50">
+      </div>
+      <button class="btn-add" onclick="addAporte()">+ Registrar Aporte</button>
+    </div>
+    <div class="section-title">Últimos Aportes Registrados</div>
+    <div class="table-box">
+      <div class="empty-state" id="aporte-empty"><div class="icon">📥</div><div>Nenhum aporte registrado ainda.</div></div>
+      <table id="aporte-table" style="display:none">
+        <thead><tr><th>Data</th><th>Ativo</th><th>Aportado</th><th>Valor Dia</th><th></th></tr></thead>
+        <tbody id="tabela-novos-aportes"></tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <div id="tab-atualizar" class="tab-content">
+    <div class="section-title">✏️ Atualizar Preços Manualmente</div>
+    <div class="opp-form">
+      <h3>Bitcoin</h3>
+      <div class="form-row">
+        <input type="number" id="manual-btc" placeholder="Preço BTC em R$ (ex: 419650)" step="0.01">
+      </div>
+      <button class="btn-add" onclick="atualizarBTCManual()">Atualizar Bitcoin</button>
+    </div>
+    <div class="opp-form">
+      <h3>Ação da XP</h3>
+      <div class="form-row">
+        <input type="text" id="manual-ticker" placeholder="Ticker (ex: BBAS3)" maxlength="8">
+        <input type="number" id="manual-preco" placeholder="Preço atual (R$)" step="0.01">
+      </div>
+      <button class="btn-add" onclick="atualizarAcaoManual()">Atualizar Ação</button>
+    </div>
+    <div class="card">
+      <div class="card-label">Dica</div>
+      <div class="card-sub">Consulte o preço na XP ou no Google e cole aqui. O app recalcula o valor e o lucro automaticamente.</div>
+    </div>
+  </div>
+
+  <div class="update-info">Aportly • Seus aportes sob controle • Dados de referência 11/10/2026</div>
+</div>
+
+<div class="nav">
+  <div class="nav-item active" onclick="showTab('dashboard', this)"><div class="nav-icon">🏠</div><div>Home</div></div>
+  <div class="nav-item" onclick="showTab('xp', this)"><div class="nav-icon">💼</div><div>XP</div></div>
+  <div class="nav-item" onclick="showTab('cripto', this)"><div class="nav-icon">₿</div><div>Cripto</div></div>
+  <div class="nav-item" onclick="showTab('novo-aporte', this)"><div class="nav-icon">➕</div><div>Aporte</div></div>
+  <div class="nav-item" onclick="showTab('aportes', this)"><div class="nav-icon">📥</div><div>Aportes</div></div>
+  <div class="nav-item" onclick="showTab('oportunidades', this)"><div class="nav-icon">🟠</div><div>Oport.</div></div>
+  <div class="nav-item" onclick="showTab('atualizar', this)"><div class="nav-icon">✏️</div><div>Preços</div></div>
+  <div class="nav-item" onclick="showTab('alertas', this)"><div class="nav-icon">🔔</div><div>Alertas</div></div>
+  <div class="nav-item" onclick="showTab('sinais', this)"><div class="nav-icon">🎯</div><div>Sinais</div></div>
+</div>
+
+<script>
+const savedCarteira = localStorage.getItem('aportly_carteira');
+if (savedCarteira) {
+  try { ativosXP.splice(0, ativosXP.length, ...JSON.parse(savedCarteira)); } catch(e){}
+}
+const ativosXP = [
+  {classe:"Ações", ativo:"BBAS3", valor:246.40, rent:24.36, sinal:"venda", preco:24.64},
+  {classe:"Ações", ativo:"BBSE3", valor:734.76, rent:5.89, sinal:"manter", preco:40.82},
+  {classe:"Ações", ativo:"BMGB4", valor:56.00, rent:30.17, sinal:"venda", preco:7.00},
+  {classe:"Ações", ativo:"BRSR6", valor:56.61, rent:37.40, sinal:"venda", preco:18.87},
+  {classe:"Ações", ativo:"CMIG4", valor:970.40, rent:9.63, sinal:"manter", preco:12.13},
+  {classe:"Ações", ativo:"CPLE3", valor:35.30, rent:20.48, sinal:"venda", preco:17.65},
+  {classe:"Ações", ativo:"CXSE3", valor:1022.63, rent:9.39, sinal:"manter", preco:20.87},
+  {classe:"Ações", ativo:"ITUB4", valor:1211.28, rent:26.63, sinal:"venda", preco:50.47},
+  {classe:"Ações", ativo:"SAPR4", valor:363.30, rent:27.12, sinal:"venda", preco:8.65},
+  {classe:"Ações", ativo:"TAEE11", valor:789.65, rent:17.88, sinal:"venda", preco:46.45},
+  {classe:"FIIs", ativo:"HGLG11", valor:1260.64, rent:6.46, sinal:"manter", preco:157.58},
+  {classe:"FIIs", ativo:"KNCR11", valor:210.90, rent:0.65, sinal:"manter", preco:105.45},
+  {classe:"FIIs", ativo:"XPML11", valor:540.35, rent:6.38, sinal:"manter", preco:108.07},
+  {classe:"Renda Fixa", ativo:"LCA BNDES", valor:1102.37, rent:0.95, sinal:"manter", preco:1102.37},
+];
+const aportes = [
+  {data:"19/06", valor:500.00, tipo:"Inicial", total:500.00},
+  {data:"22/06", valor:505.00, tipo:"1%", total:1005.00},
+  {data:"26/06", valor:510.05, tipo:"1%", total:1515.05},
+  {data:"02/07", valor:515.15, tipo:"1%", total:2030.20},
+  {data:"07/07", valor:520.30, tipo:"1%", total:2550.50},
+  {data:"14/07", valor:525.50, tipo:"1%", total:3076.00},
+  {data:"21/07", valor:530.75, tipo:"1%", total:3606.75},
+  {data:"28/07", valor:536.05, tipo:"1%", total:4142.80},
+  {data:"04/08", valor:541.41, tipo:"1%", total:4683.81},
+  {data:"11/08", valor:546.82, tipo:"1%", total:5230.63},
+  {data:"18/08", valor:552.28, tipo:"1%", total:5782.91},
+  {data:"24/08", valor:557.81, tipo:"1%", total:6340.72},
+  {data:"31/08", valor:563.38, tipo:"1%", total:6904.10},
+  {data:"07/09", valor:569.01, tipo:"1%", total:7473.11},
+  {data:"14/09", valor:1594.70, tipo:"Extra", total:9067.81},
+  {data:"21/09", valor:1490.00, tipo:"Extra", total:10557.81},
+  {data:"28/09", valor:700.00, tipo:"Extra", total:11257.81},
+  {data:"04/10", valor:1000.00, tipo:"Extra", total:12257.22},
+];
+
+
+let novosAportes = JSON.parse(localStorage.getItem('aportly_novos_aportes') || '[]');
+
+function addAporte() {
+  const data = document.getElementById('aporte-data').value;
+  const tipo = document.getElementById('aporte-tipo').value;
+  const ativo = document.getElementById('aporte-ativo').value.trim().toUpperCase();
+  const valor = parseFloat(document.getElementById('aporte-valor').value);
+  const valorDia = parseFloat(document.getElementById('aporte-valor-dia').value) || null;
+  const obs = document.getElementById('aporte-obs').value.trim();
+
+  if (!data || !ativo || !valor) { alert('Preencha data, ativo e valor aportado'); return; }
+
+  const aporte = {
+    data: new Date(data + 'T12:00:00').toLocaleDateString('pt-BR'),
+    tipo, ativo, valor, valorDia, obs
+  };
+  novosAportes.unshift(aporte);
+  localStorage.setItem('aportly_novos_aportes', JSON.stringify(novosAportes));
+
+  // Atualizar carteira
+  atualizarCarteira(aporte);
+
+  renderNovosAportes();
+  renderTables();
+  ['aporte-ativo','aporte-valor','aporte-valor-dia','aporte-obs'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('aporte-data').value = new Date().toISOString().split('T')[0];
+}
+
+function atualizarCarteira(aporte) {
+  if (aporte.tipo === 'btc') {
+    // Atualiza Bitcoin (simplificado - soma valor)
+    alert('Aporte em BTC registrado! Valor adicionado ao total.');
+    return;
+  }
+  // Para ações/FIIs
+  let found = ativosXP.find(a => a.ativo === aporte.ativo);
+  if (found) {
+    // Já existe: soma valor e recalcula preço médio aproximado
+    const novoTotal = found.valor + aporte.valor;
+    const rentAprox = aporte.valorDia && aporte.valor ? ((aporte.valorDia / aporte.valor) - 1) * 100 : found.rent;
+    found.valor = novoTotal;
+    found.rent = (found.rent + rentAprox) / 2; // média simples
+    alert(`Aporte somado em ${aporte.ativo}! Novo valor: ${formatMoney(novoTotal)}`);
+  } else {
+    // Novo ativo
+    ativosXP.push({
+      classe: 'Ações',
+      ativo: aporte.ativo,
+      valor: aporte.valor,
+      rent: aporte.valorDia && aporte.valor ? ((aporte.valorDia / aporte.valor) - 1) * 100 : 0,
+      sinal: 'manter',
+      preco: aporte.valorDia || aporte.valor
+    });
+    alert(`Novo ativo adicionado: ${aporte.ativo}`);
+  }
+  // Salva carteira atualizada
+  localStorage.setItem('aportly_carteira', JSON.stringify(ativosXP));
+}
+
+function removeNovoAporte(i) {
+  novosAportes.splice(i, 1);
+  localStorage.setItem('aportly_novos_aportes', JSON.stringify(novosAportes));
+  renderNovosAportes();
+}
+
+function renderNovosAportes() {
+  const tbody = document.getElementById('tabela-novos-aportes');
+  const empty = document.getElementById('aporte-empty');
+  const table = document.getElementById('aporte-table');
+  if (!tbody) return;
+  if (novosAportes.length === 0) { empty.style.display = 'block'; table.style.display = 'none'; return; }
+  empty.style.display = 'none'; table.style.display = 'table';
+  tbody.innerHTML = novosAportes.map((a, i) => `
+    <tr>
+      <td>${a.data}</td>
+      <td><div class="asset-name">${a.ativo}</div><div class="asset-class">${a.tipo === 'btc' ? 'Bitcoin' : 'Ação/FII'}</div></td>
+      <td>${formatMoney(a.valor)}</td>
+      <td>${a.valorDia ? formatMoney(a.valorDia) : '-'}</td>
+      <td><button class="btn-remove" onclick="removeNovoAporte(${i})">✕</button></td>
+    </tr>`).join('');
+}
+
+let oportunidades = JSON.parse(localStorage.getItem('aportly_oportunidades') || '[]');
+let alertas = JSON.parse(localStorage.getItem('aportly_alertas') || '[]');
+
+function formatMoney(v) { return v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'}); }
+
+function calcSinal(rent) {
+  if (rent <= -5) return 'compra';
+  if (rent >= 50) return 'venda_parcial';
+  if (rent >= 30) return 'reavaliar';
+  return 'manter';
+}
+
+function getSinal(s) {
+  if (s === 'compra') return '<span class="sinal compra">🟢 Compra</span>';
+  if (s === 'reavaliar') return '<span class="sinal venda">🟠 Reavaliar</span>';
+  if (s === 'venda_parcial') return '<span class="sinal oportunidade">🔴 Venda Parcial</span>';
+  if (s === 'oportunidade') return '<span class="sinal oportunidade">🟠 Oport.</span>';
+  return '<span class="sinal manter">🟡 Manter</span>';
+}
+function getAlertLabel(tipo) {
+  if (tipo === 'compra') return '<span class="sinal compra">🟢 Compra</span>';
+  if (tipo === 'venda') return '<span class="sinal venda">🔴 Venda</span>';
+  return '<span class="sinal manter">🟡 Manter</span>';
+}
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  document.getElementById('date').textContent = now.toLocaleDateString('pt-BR', {weekday:'short', day:'2-digit', month:'2-digit', year:'numeric'});
+  document.getElementById('last-update').textContent = document.getElementById('clock').textContent;
+}
+setInterval(updateClock, 1000); updateClock();
+
+function renderTables() {
+  document.getElementById('tabela-xp').innerHTML = ativosXP.map(a => {
+    const sinal = calcSinal(a.rent);
+    return `<tr><td><div class="asset-name">${a.ativo}</div><div class="asset-class">${a.classe}</div></td>
+    <td>${formatMoney(a.valor)}</td>
+    <td class="rent ${a.rent>=0?'pos':'neg'}">${a.rent>=0?'+':''}${a.rent.toFixed(2)}%</td>
+    <td>${getSinal(sinal)}</td></tr>`;
+  }).join('');
+
+  document.getElementById('tabela-aportes').innerHTML = aportes.slice().reverse().map(a => `
+    <tr><td>${a.data}</td><td>${formatMoney(a.valor)}</td><td>${a.tipo}</td><td>${formatMoney(a.total)}</td></tr>`).join('');
+
+  const all = [...ativosXP, {classe:"Cripto", ativo:"BTC", valor:18765, rent:26.78}];
+  document.getElementById('tabela-sinais').innerHTML = all.map(a => {
+    const sinal = calcSinal(a.rent);
+    return `<tr><td><div class="asset-name">${a.ativo}</div><div class="asset-class">${a.classe}</div></td>
+    <td class="rent ${a.rent>=0?'pos':'neg'}">${a.rent>=0?'+':''}${a.rent.toFixed(2)}%</td>
+    <td>${getSinal(sinal)}</td></tr>`;
+  }).join('');
+}
+
+function renderOportunidades() {
+  const tbody = document.getElementById('tabela-oportunidades');
+  const empty = document.getElementById('opp-empty');
+  const table = document.getElementById('opp-table');
+  document.getElementById('opp-count').textContent = oportunidades.length;
+  if (oportunidades.length === 0) { empty.style.display = 'block'; table.style.display = 'none'; return; }
+  empty.style.display = 'none'; table.style.display = 'table';
+  tbody.innerHTML = oportunidades.map((o, i) => `
+    <tr>
+      <td><div class="asset-name">${o.ticker}</div><div class="asset-class">${o.nome || ''}</div></td>
+      <td>${o.preco ? formatMoney(parseFloat(o.preco)) : '-'}</td>
+      <td><span class="sinal oportunidade">🟠</span><div style="font-size:11px;color:#FF6B00">${o.motivo || 'Preço bom'}</div></td>
+      <td><button class="btn-remove" onclick="removeOpportunity(${i})">✕</button></td>
+    </tr>`).join('');
+}
+
+function renderAlertas() {
+  const tbody = document.getElementById('tabela-alertas');
+  const empty = document.getElementById('alert-empty');
+  const table = document.getElementById('alert-table');
+  document.getElementById('alert-count').textContent = alertas.length;
+  if (alertas.length === 0) { empty.style.display = 'block'; table.style.display = 'none'; return; }
+  empty.style.display = 'none'; table.style.display = 'table';
+  tbody.innerHTML = alertas.map((a, i) => {
+    const ativo = ativosXP.find(x => x.ativo === a.ticker);
+    const precoAtual = ativo ? ativo.preco : null;
+    let triggered = false;
+    if (precoAtual && a.preco) {
+      if (a.tipo === 'compra' && precoAtual <= a.preco) triggered = true;
+      if (a.tipo === 'venda' && precoAtual >= a.preco) triggered = true;
+      if (a.tipo === 'manter' && Math.abs(precoAtual - a.preco) / a.preco < 0.03) triggered = true;
+    }
+    return `<tr class="${triggered ? 'alert-triggered' : ''}">
+      <td><div class="asset-name">${a.ticker}</div>${triggered ? '<div style="font-size:10px;color:#FF6B00">⚠️ Alerta atingido</div>' : ''}</td>
+      <td>${getAlertLabel(a.tipo)}</td>
+      <td>${formatMoney(parseFloat(a.preco))}</td>
+      <td style="font-size:11px">${a.nota || '-'}</td>
+      <td><button class="btn-remove" onclick="removeAlert(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function addOpportunity() {
+  const ticker = document.getElementById('opp-ticker').value.trim().toUpperCase();
+  if (!ticker) { alert('Informe o ticker'); return; }
+  oportunidades.unshift({ ticker, nome: document.getElementById('opp-nome').value.trim(), preco: document.getElementById('opp-preco').value, motivo: document.getElementById('opp-motivo').value.trim() || 'Preço bom', data: new Date().toLocaleDateString('pt-BR') });
+  localStorage.setItem('aportly_oportunidades', JSON.stringify(oportunidades));
+  renderOportunidades();
+  ['opp-ticker','opp-nome','opp-preco','opp-motivo'].forEach(id => document.getElementById(id).value = '');
+}
+function removeOpportunity(i) { oportunidades.splice(i, 1); localStorage.setItem('aportly_oportunidades', JSON.stringify(oportunidades)); renderOportunidades(); }
+
+function addAlert() {
+  const ticker = document.getElementById('alert-ticker').value.trim().toUpperCase();
+  const preco = document.getElementById('alert-preco').value;
+  if (!ticker || !preco) { alert('Informe ticker e preço alvo'); return; }
+  alertas.unshift({ ticker, tipo: document.getElementById('alert-tipo').value, preco: parseFloat(preco), nota: document.getElementById('alert-nota').value.trim(), data: new Date().toLocaleDateString('pt-BR') });
+  localStorage.setItem('aportly_alertas', JSON.stringify(alertas));
+  renderAlertas();
+  document.getElementById('alert-ticker').value = '';
+  document.getElementById('alert-preco').value = '';
+  document.getElementById('alert-nota').value = '';
+}
+function removeAlert(i) { alertas.splice(i, 1); localStorage.setItem('aportly_alertas', JSON.stringify(alertas)); renderAlertas(); }
+
+let charts = {};
+function initCharts() {
+  new Chart(document.getElementById('chartEvolucao'), { type:'line', data:{ labels:aportes.map(a=>a.data), datasets:[{ data:aportes.map(a=>a.total), borderColor:'#FFD60A', backgroundColor:'rgba(255,214,10,0.08)', fill:true, tension:0.35, pointRadius:2, borderWidth:2.5 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#6B6B6B',font:{size:9}},grid:{color:'#2A2A2A'}}, y:{ticks:{color:'#6B6B6B',callback:v=>'R$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2A2A2A'}} } } });
+  new Chart(document.getElementById('chartAlocacao'), { type:'doughnut', data:{ labels:['Bitcoin','Ações','FIIs','Renda Fixa','Conta XP'], datasets:[{ data:[18765,5486.33,2011.89,1102.37,4399.94], backgroundColor:['#FF6B00','#FFD60A','#A0A0A0','#4A4A4A','#2A2A2A'], borderWidth:0 }] }, options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{legend:{position:'bottom',labels:{color:'#F5F5F5',boxWidth:10,padding:10,font:{size:11}}}} } });
+  new Chart(document.getElementById('chartRentabilidade'), { type:'bar', data:{ labels:['Bitcoin','Ações','FIIs','Renda Fixa'], datasets:[{ data:[26.78,14.71,6.63,0.92], backgroundColor:['#FF6B00','#FFD60A','#A0A0A0','#4A4A4A'], borderRadius:6 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#F5F5F5'},grid:{display:false}}, y:{ticks:{color:'#6B6B6B',callback:v=>v+'%'},grid:{color:'#2A2A2A'}} } } });
+  new Chart(document.getElementById('chartAportes'), { type:'bar', data:{ labels:aportes.map(a=>a.data), datasets:[{ data:aportes.map(a=>a.valor), backgroundColor:aportes.map(a=>a.tipo==='1%'?'#FFD60A':'#FF6B00'), borderRadius:4 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#6B6B6B',font:{size:8}},grid:{display:false}}, y:{ticks:{color:'#6B6B6B'},grid:{color:'#2A2A2A'}} } } });
+  new Chart(document.getElementById('chartBTC'), { type:'line', data:{ labels:['Jun','Jul','Ago','Set','Out'], datasets:[{ data:[14723,15500,16200,17800,18742], borderColor:'#FF6B00', backgroundColor:'rgba(255,107,0,0.1)', fill:true, tension:0.35, pointRadius:4, borderWidth:2.5 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#6B6B6B'},grid:{color:'#2A2A2A'}}, y:{ticks:{color:'#6B6B6B',callback:v=>'R$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2A2A2A'}} } } });
+}
+
+
+async function atualizarPrecos() {
+  const btn = document.querySelector('button[onclick="atualizarPrecos()"]');
+  if (btn) { btn.textContent = '⏳ Buscando...'; btn.disabled = true; }
+  const status = document.getElementById('last-update');
+  if (status) status.textContent = 'Buscando preços...';
+
+  // === BITCOIN ===
+  let btcPrice = null;
+  try {
+    const r = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCBRL');
+    if (r.ok) {
+      const d = await r.json();
+      btcPrice = parseFloat(d.price);
+    }
+  } catch(e) {}
+  if (!btcPrice) {
+    try {
+      const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=brl');
+      if (r.ok) {
+        const d = await r.json();
+        btcPrice = d.bitcoin?.brl;
+      }
+    } catch(e) {}
+  }
+
+  if (btcPrice) {
+    const qty = 0.04471413;
+    const valor = btcPrice * qty;
+    document.querySelectorAll('.card-value.orange').forEach(el => {
+      if (el.closest('.card')?.textContent.includes('Bitcoin') || el.textContent.includes('18.')) {
+        el.textContent = formatMoney(valor);
+      }
+    });
+  }
+
+  // === AÇÕES (via Yahoo Finance) ===
+  const tickers = ['BBAS3.SA', 'ITUB4.SA', 'CXSE3.SA', 'CMIG4.SA', 'TAEE11.SA'];
+  for (const t of tickers) {
+    try {
+      const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${t}?interval=1d&range=1d`);
+      if (r.ok) {
+        const d = await r.json();
+        const price = d.chart?.result?.[0]?.meta?.regularMarketPrice;
+        if (price) {
+          const symbol = t.replace('.SA','');
+          console.log(symbol, price);
+          // Aqui poderíamos atualizar a tabela se tivéssemos os elementos com data-ticker
+        }
+      }
+    } catch(e) {}
+  }
+
+  if (status) status.textContent = btcPrice ? 'Atualizado' : 'Falha';
+  if (btn) { btn.textContent = '🔄 Atualizar Preços'; btn.disabled = false; }
+  if (btcPrice) alert('Bitcoin atualizado: R$ ' + btcPrice.toLocaleString('pt-BR'));
+}
+
+setInterval(() => { if (document.visibilityState === 'visible') atualizarPrecos(); }, 60000);
+
+
+
+
+function atualizarBTCManual() {
+  try {
+    const input = document.getElementById('manual-btc');
+    if (!input) { alert('Campo não encontrado'); return; }
+    const preco = parseFloat(input.value.replace(',', '.'));
+    if (!preco || preco <= 0) { 
+      alert('Digite um preço válido. Exemplo: 419650'); 
+      return; 
+    }
+
+    const qty = 0.04471413;
+    const valor = Math.round(preco * qty * 100) / 100;
+    const investido = 14723.46;
+    const lucro = Math.round((valor - investido) * 100) / 100;
+
+    const valorFormatado = 'R$ ' + valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const lucroFormatado = (lucro >= 0 ? '+R$ ' : 'R$ ') + Math.abs(lucro).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    // Atualiza TODOS os textos laranja
+    document.querySelectorAll('.card-value.orange').forEach(function(el) {
+      el.textContent = valorFormatado;
+    });
+
+    // Atualiza textos verdes que parecem lucro
+    document.querySelectorAll('.card-value.green').forEach(function(el) {
+      if (el.textContent.includes('+R$') || el.textContent.includes('Lucro')) {
+        el.textContent = lucroFormatado;
+      }
+    });
+
+    // Atualiza o Patrimônio Total (XP + Cripto)
+    const valorXP = 13024.66;
+    const totalPatrimonio = valorXP + valor;
+    const totalFormatado = 'R$ ' + totalPatrimonio.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    document.querySelectorAll('.card-value.yellow').forEach(function(el) {
+      const card = el.closest('.card');
+      if (card && card.textContent.includes('Patrimônio Total')) {
+        el.textContent = totalFormatado;
+      }
+    });
+
+    alert('Bitcoin atualizado!\n\nPreço: R$ ' + preco.toLocaleString('pt-BR') + 
+          '\nValor da posição: ' + valorFormatado + 
+          '\nLucro: ' + lucroFormatado +
+          '\n\nPatrimônio Total: ' + totalFormatado);
+
+    input.value = '';
+
+    // Muda para a aba Cripto
+    var navItems = document.querySelectorAll('.nav-item');
+    if (navItems[2]) showTab('cripto', navItems[2]);
+
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+function atualizarAcaoManual() {
+  const ticker = document.getElementById('manual-ticker').value.trim().toUpperCase();
+  const preco = parseFloat(document.getElementById('manual-preco').value);
+  if (!ticker || !preco || preco <= 0) { 
+    alert('Informe o ticker e um preço válido'); 
+    return; 
+  }
+
+  const ativo = ativosXP.find(a => a.ativo === ticker);
+  if (!ativo) {
+    alert('Ativo "' + ticker + '" não encontrado na carteira.\n\nRegistre um aporte dele primeiro na aba ➕ Aporte.');
+    return;
+  }
+
+  const precoAntigo = ativo.preco || preco;
+  const qtd = ativo.valor / precoAntigo;
+  const novoValor = qtd * preco;
+  const novaRent = ((preco - precoAntigo) / precoAntigo) * 100;
+
+  ativo.preco = preco;
+  ativo.valor = novoValor;
+  ativo.rent = novaRent;
+
+  localStorage.setItem('aportly_carteira', JSON.stringify(ativosXP));
+  renderTables();
+
+  alert(ticker + ' atualizado com sucesso!\n\n' +
+        'Preço antigo: R$ ' + precoAntigo.toFixed(2) + '\n' +
+        'Preço novo: R$ ' + preco.toFixed(2) + '\n' +
+        'Valor na carteira: ' + formatMoney(novoValor) + '\n' +
+        'Rentabilidade: ' + novaRent.toFixed(2) + '%');
+
+  document.getElementById('manual-ticker').value = '';
+  document.getElementById('manual-preco').value = '';
+}
+
+function showTab(tab, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+renderTables();
+renderOportunidades();
+renderAlertas();
+renderNovosAportes();
+
+  // Gráfico Ações XP
+  new Chart(document.getElementById('chartAcoes'), {
+    type: 'bar',
+    data: {
+      labels: ['BBAS3', 'ITUB4', 'CXSE3', 'CMIG4', 'TAEE11', 'SAPR4'],
+      datasets: [{
+        label: 'Rentabilidade %',
+        data: [24.36, 26.63, 9.39, 9.63, 17.88, 27.12],
+        backgroundColor: ['#FFD60A', '#FFD60A', '#A0A0A0', '#A0A0A0', '#FF6B00', '#FF6B00'],
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#F5F5F5', font: { size: 10 } }, grid: { display: false } },
+        y: { ticks: { color: '#6B6B6B', callback: v => v + '%', font: { size: 10 } }, grid: { color: '#2A2A2A' } }
+      }
+    }
+  });
+
+initCharts();
+// atualizarPrecos();
+document.getElementById("aporte-data").value = new Date().toISOString().split("T")[0];
+</script>
+</body>
+</html>
